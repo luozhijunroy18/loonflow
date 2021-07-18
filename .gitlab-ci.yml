@@ -1,0 +1,21 @@
+variables:
+  IMAGE_NAME: "registry-dev.ekuaibao.com/ops/loonflow-web"
+
+
+
+stages:
+  - build
+
+
+
+build:
+  stage: build
+  image: registry-dev.ekuaibao.com/library/docker:18.09.7-dind
+  script:
+    - docker build -t "${IMAGE_NAME}:$CI_BUILD_TAG" -f docker_compose_deploy/loonflow-web/Dockerfile --build-arg release=$CI_BUILD_TAG .
+    - docker push "${IMAGE_NAME}:$CI_BUILD_TAG"
+  tags:
+    - hose
+  only:
+    - tags
+

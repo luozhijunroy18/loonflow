@@ -23,12 +23,6 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.0/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'm$*&&u*9+-$g^b9lj0)**1$0$wfh1wk$ye^4p+s)cera)g3fml'
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
 ALLOWED_HOSTS = []
 
 
@@ -125,9 +119,11 @@ LOGIN_URL = '/manage/login'
 
 APPEND_SLASH = False  # disable urls.W002 warning
 
-if platform.system() == 'Windows':
-    HOMEPATH = os.environ['HOMEPATH']
-else:
-    HOMEPATH = os.environ['HOME']
+# if platform.system() == 'Windows':
+#     HOMEPATH = os.environ['HOMEPATH']
+# else:
+#     HOMEPATH = os.environ['HOME']
+
+HOMEPATH = "/var/log/loonflow"
 
 JWT_SALT = 'aUApFqfQjyYVAPo8'

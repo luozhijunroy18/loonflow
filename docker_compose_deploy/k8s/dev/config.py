@@ -9,6 +9,8 @@ SECRET_KEY = 'm$*&&u*9+-$g^b9lj0)**1$0$wfh1wk$ye^4p+s)cera)g3fml'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
+ALLOWED_HOSTS = ["*"]
+
 MIDDLEWARE = [
     'service.csrf_service.DisableCSRF',
     'django.middleware.security.SecurityMiddleware',
@@ -77,9 +79,9 @@ LOGGING = {
         },
         'loggers': {
             'django': {
-                'handlers': ['file_handler'],
+                'handlers': ['file_handler', "console"],
                 'propagate': True,
-                'level': 'INFO',
+                'level': 'DEBUG',
                         },
             'django.db.backends': {
                 'handlers': ['console'],

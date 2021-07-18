@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+  labels:
+    app: ops-loonflow-task
+  name: ops-loonflow-task
+  namespace: ops
+spec:
+  replicas: 1
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      app: ops-loonflow-task
+  template:
+    metadata:
+      labels:
+        app: ops-loonflow-task
+    spec:
+      containers:
+      - env:
+        - name: SETTINGS_ENV
+          value: dev
+        volumeMounts:
+        - mountPath: /etc/localtime
+          name: timezone
+        - mountPath: /opt/loonflow/settings/config.py
+          subPath: config.py
+          name: loonflow-settings-conf
+        image: registry-dev.ekuaibao.com/ops/loonflow-task:1.0.2
+        command: ["/bin/sh"]
+        args: ["-c", "celery -A tasks worker -l info -c 8 -Q loonflow"]
+        imagePullPolicy: IfNotPresent
+        name: ops-loonflow-task
+        ports:
+        - containerPort: 80
+          protocol: TCP
+        resources: {}
+      dnsPolicy: ClusterFirst
+      imagePullSecrets:
+      - name: dev-hub
+      restartPolicy: Always
+      volumes:
+        - name: timezone
+          hostPath:
+            path: /etc/localtime
+        - name: loonflow-settings-conf
+          configMap:
+            name: loonflow-settings-conf
