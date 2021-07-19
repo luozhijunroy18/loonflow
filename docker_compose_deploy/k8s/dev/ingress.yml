@@ -1,0 +1,14 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: loonflow
+  namespace: ops
+spec:
+  rules:
+  - host: loonflow.ekuaibao.net
+    http:
+      paths:
+      - backend:
+          serviceName: ops-loonflow-web-service
+          servicePort: 80
+        path: /
