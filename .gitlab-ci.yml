@@ -1,5 +1,6 @@
 variables:
-  IMAGE_NAME: "registry-dev.ekuaibao.com/ops/loonflow-web"
+  WEB_IMAGE_NAME: "registry-dev.ekuaibao.com/ops/loonflow-web"
+  TASK_IMAGE_NAME: "registry-dev.ekuaibao.com/ops/loonflow-web"
 
 
 
@@ -12,8 +13,10 @@ build:
   stage: build
   image: registry-dev.ekuaibao.com/library/docker:18.09.7-dind
   script:
-    - docker build -t "${IMAGE_NAME}:$CI_BUILD_TAG" -f docker_compose_deploy/loonflow-web/Dockerfile --build-arg release=$CI_BUILD_TAG .
-    - docker push "${IMAGE_NAME}:$CI_BUILD_TAG"
+    - docker build -t "${WEB_IMAGE_NAME}:$CI_BUILD_TAG" -f docker_compose_deploy/loonflow-web/Dockerfile .
+    - docker push "${WEB_IMAGE_NAME}:$CI_BUILD_TAG"
+    - docker build -t "${TASK_IMAGE_NAME}:$CI_BUILD_TAG" -f docker_compose_deploy/loonflow-task/Dockerfile .
+    - docker push "${TASK_IMAGE_NAME}:$CI_BUILD_TAG"
   tags:
     - hose
   only:
