@@ -12,7 +12,7 @@ class LoonDept(BaseModel):
     parent_dept_id = models.IntegerField('上级部门id', blank=True, default=0)
     leader = models.CharField('部门leader', max_length=50, blank=True, default='', help_text='部门的leader, loonuser表中的用户名')
     approver = models.CharField('审批人', max_length=100, blank=True, default='', help_text='loonuser表中的用户名, 逗号隔开多个user。当工作流设置为leader审批时， 优先以审批人为准，如果审批人为空，则取leader')
-    label = models.CharField('标签', max_length=50, blank=True, default='', help_text='因为部门信息一般是从别处同步过来， 为保证对应关系，同步时可以在此字段设置其他系统中相应的唯一标识')
+    label = models.CharField('标签', max_length=1024, blank=True, default='', help_text='因为部门信息一般是从别处同步过来， 为保证对应关系，同步时可以在此字段设置其他系统中相应的唯一标识')
 
     creator = models.CharField('创建人', max_length=50, help_text='loonuser表中的用户名')
     gmt_created = models.DateTimeField('创建时间', auto_now_add=True)
@@ -88,7 +88,7 @@ class LoonRole(BaseModel):
     name = models.CharField('名称', max_length=50)
     description = models.CharField('描述', max_length=50, default='')
 
-    label = models.CharField('标签', max_length=50, blank=True, default='{}', help_text='因为角色信息也可能是从别处同步过来， 为保证对应关系，同步时可以在此字段设置其他系统中相应的唯一标识,字典的json格式')
+    label = models.CharField('标签', max_length=1024, blank=True, default='{}', help_text='因为角色信息也可能是从别处同步过来， 为保证对应关系，同步时可以在此字段设置其他系统中相应的唯一标识,字典的json格式')
     creator = models.CharField('创建人', max_length=50)
     gmt_created = models.DateTimeField('创建时间', auto_now_add=True)
     gmt_modified = models.DateTimeField('更新时间', auto_now=True)
