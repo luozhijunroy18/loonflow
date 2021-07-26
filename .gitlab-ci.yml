@@ -1,6 +1,6 @@
 variables:
   WEB_IMAGE_NAME: "registry-dev.ekuaibao.com/ops/loonflow-web"
-  TASK_IMAGE_NAME: "registry-dev.ekuaibao.com/ops/loonflow-web"
+  TASK_IMAGE_NAME: "registry-dev.ekuaibao.com/ops/loonflow-task"
 
 
 
