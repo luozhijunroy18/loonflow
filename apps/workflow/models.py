@@ -58,12 +58,12 @@ class State(BaseModel):
         # 部门
         elif self.participant_type_id == 3:
             user_id_list = account_models.LoonUserDept.objects.filter(is_deleted=0, dept_id__in=value_list).values_list(
-                "user_id", flag=True).distinct()
+                "user_id", flat=True).distinct()
             user_qs = account_models.LoonUser.objects.filter(is_deleted=0, id__in=user_id_list)
         # 角色
         elif self.participant_type_id == 4:
             user_id_list = account_models.LoonUserRole.objects.filter(is_deleted=0, role_id__in=value_list).values_list(
-                "user_id", flag=True).distinct()
+                "user_id", flat=True).distinct()
             user_qs = account_models.LoonUser.objects.filter(is_deleted=0, id__in=user_id_list)
         # 其他暂不支持返回用户
         else:
