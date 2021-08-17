@@ -65,7 +65,7 @@ class WorkflowCustomFieldService(BaseService):
             query_params &= Q(field_key__contains=query_value) | Q(description__contains=query_value) \
                             | Q(field_name__contains=query_value)
 
-        workflow_custom_field_queryset = CustomField.objects.filter(query_params).order_by('id')
+        workflow_custom_field_queryset = CustomField.objects.filter(query_params).order_by('order_id')
         paginator = Paginator(workflow_custom_field_queryset, per_page)
         try:
             workflow_custom_field_result_paginator = paginator.page(page)

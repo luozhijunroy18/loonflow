@@ -145,7 +145,7 @@ class WorkflowBasicInfo extends Component<any, any> {
             <Col span={12} key="firstCol">
               <Form.Item
                 name="name"
-                label= "名称1111"
+                label= "名称"
                 rules={[
                   {
                     required: true,
