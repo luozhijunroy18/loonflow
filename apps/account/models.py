@@ -130,6 +130,8 @@ class LoonUser(AbstractBaseUser):
     alias = models.CharField('姓名', max_length=50, default='')
     email = models.EmailField('邮箱', max_length=255)
     phone = models.CharField('电话', max_length=13, default='')
+    qywechat_avatar = models.TextField('企业微信头像', null=True, blank=True)
+    feishu_avatar = models.TextField('飞书头像', null=True, blank=True)
     is_active = models.BooleanField('已激活', default=True)
     type_id = models.IntegerField('用户类型', default=0)  # 见service.common.constant_service中定义
 

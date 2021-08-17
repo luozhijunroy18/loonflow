@@ -2,6 +2,7 @@ import os
 import uuid
 from django.db import models
 from apps.loon_base_model import BaseModel
+from apps.account import models as account_models
 
 
 class Workflow(BaseModel):
@@ -44,6 +45,41 @@ class State(BaseModel):
     distribute_type_id = models.IntegerField('分配方式', default=1, help_text='1.主动接单(如果当前处理人实际为多人的时候，需要先接单才能处理) 2.直接处理(即使当前处理人实际为多人，也可以直接处理) 3.随机分配(如果实际为多人，则系统会随机分配给其中一个人) 4.全部处理(要求所有参与人都要处理一遍,才能进入下一步)')
     state_field_str = models.TextField('表单字段', default='{}', help_text='json格式字典存储,包括读写属性1：只读，2：必填，3：可选. 示例：{"created_at":1,"title":2, "sn":1}, 内置特殊字段participant_info.participant_name:当前处理人信息(部门名称、角色名称)，state.state_name:当前状态的状态名,workflow.workflow_name:工作流名称')  # json格式存储,包括读写属性1：只读，2：必填，3：可选，4：不显示, 字典的字典
     label = models.CharField('状态标签', max_length=1000, default='{}', help_text='json格式，由调用方根据实际定制需求自行确定,如状态下需要显示哪些前端组件:{"components":[{"AppList":1, "ProjectList":7}]}')
+
+    @property
+    def participant_user_list(self):
+        """
+        参与人列表
+        """
+        # 个人、多人
+        value_list = self.participant.split(',')
+        if self.participant_type_id in [1, 2]:
+            user_qs = account_models.LoonUser.objects.filter(is_deleted=0, username__in=value_list)
+        # 部门
+        elif self.participant_type_id == 3:
+            user_id_list = account_models.LoonUserDept.objects.filter(is_deleted=0, dept_id__in=value_list).values_list(
+                "user_id", flag=True).distinct()
+            user_qs = account_models.LoonUser.objects.filter(is_deleted=0, id__in=user_id_list)
+        # 角色
+        elif self.participant_type_id == 4:
+            user_id_list = account_models.LoonUserRole.objects.filter(is_deleted=0, role_id__in=value_list).values_list(
+                "user_id", flag=True).distinct()
+            user_qs = account_models.LoonUser.objects.filter(is_deleted=0, id__in=user_id_list)
+        # 其他暂不支持返回用户
+        else:
+            user_qs = account_models.LoonUser.objects.none()
+        # 序列化用户数据
+        serialize_data_list = []
+        for user in user_qs:
+            user_data = {
+                "username": user.username,
+                "alias": user.alias,
+                "qywechat_avatar": user.qywechat_avatar,
+                "feishu_avatar": user.feishu_avatar,
+            }
+            serialize_data_list.append(user_data)
+
+        return serialize_data_list
 
 
 class Transition(BaseModel):
