@@ -1,7 +1,7 @@
 import React, { Component } from "react";
 import { Link } from 'umi';
 import {Table, Form, Modal, Popconfirm, Card, Row, Col, Input, Button, message} from "antd";
-import {getWorkflowList} from "@/services/workflows";
+import {delWorkflow, getWorkflowList} from "@/services/workflows";
 
 
 class WorkflowList extends Component<any, any> {
@@ -43,20 +43,37 @@ class WorkflowList extends Component<any, any> {
     }
   }
 
-  fetchWorkflowData = async(params) => {
+  fetchWorkflowData = async(params: object) => {
     params.from_admin=1
     this.setState({
       workflowListLoading: true
     });
     const result = await getWorkflowList( params);
+    const pagination = { ...this.state.pagination };
+    pagination.page = result.data.page;
+    pagination.pageSize = result.data.per_page;
+    pagination.total = result.data.total;
+
+
     if (result.code ===0 ){
       this.setState({
         workflowListLoading: false,
-        workflowListResult: result.data.value
+        workflowListResult: result.data.value,
+        pagination: pagination
       })
     } else {
       message.error(`获取工作流列表失败: ${result.msg}`)
     }
+  }
+
+
+  delWorkflowRequest = async(workflowId: number) => {
+    const result = await delWorkflow(workflowId);
+    if (result.code === 0 ){
+      message.success('删除工作流成功');
+      this.fetchWorkflowData({});
+    }
+
   }
 
   render() {
@@ -105,7 +122,7 @@ class WorkflowList extends Component<any, any> {
             <a style={{marginRight: 16, color: "red"}}>
               <Popconfirm
                 title="确认删除么"
-                onConfirm={()=>{this.delRole(record.id)}}
+                onConfirm={()=>{this.delWorkflowRequest(record.id)}}
               >
                 删除
               </Popconfirm>
