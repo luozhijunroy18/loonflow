@@ -268,7 +268,7 @@ def flow_hook_task(ticket_id):
         return False, msg
     flag, all_ticket_data = ticket_base_service_ins.get_ticket_all_field_value(ticket_id)
     if extra_info is not None:
-        all_ticket_data.update(dict(extra_info=extra_info))
+        all_ticket_data.update(dict(extra_info=extra_info, wait=wait))
     try:
         r = requests.post(hook_url, headers=msg, json=all_ticket_data, timeout=10)
         result = r.json()
