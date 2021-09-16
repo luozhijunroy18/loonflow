@@ -9,6 +9,7 @@ from django.conf import settings
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from apps.workflow.models import CustomField
 from apps.ticket.models import TicketRecord, TicketCustomField, TicketFlowLog, TicketUser
+from apps.workflow.models import State
 from service.redis_pool import POOL
 from service.base_service import BaseService
 from service.common.log_service import auto_log
@@ -1490,6 +1491,131 @@ class TicketBaseService(BaseService):
                                                         attribute_type_id=attribute_type_id,
                                                         gmt_created=str(ticket_flow_log.gmt_created)[:19]))
                 state_flow_log_list = sorted(state_flow_log_list, key=lambda keys: keys['id'],reverse=True)
+                ticket_state_step_dict['state_flow_log_list'] = state_flow_log_list
+                state_step_dict_list.append(ticket_state_step_dict)
+                state_step_dict_list = sorted(state_step_dict_list, key=lambda keys: keys['order_id'])
+        return True, dict(state_step_dict_list=state_step_dict_list, current_state_id=ticket_obj.state_id)
+
+    @classmethod
+    @auto_log
+    def get_transition_by_ticket_state(cls, state_id: int)->tuple:
+        """
+        通过状态节点获取transition动作   流转动作优先级  同意-其他-拒绝
+        """
+        flag, transition_queryset = workflow_transition_service_ins.get_state_transition_queryset(state_id=state_id)
+        if transition_queryset:
+            # 同意
+            approve_transition = transition_queryset.filter(attribute_type_id=constant_service_ins.TRANSITION_ATTRIBUTE_TYPE_ACCEPT).first()
+            if approve_transition:
+                return approve_transition
+            # 其他
+            other_transition = transition_queryset.filter(attribute_type_id=constant_service_ins.TRANSITION_ATTRIBUTE_TYPE_OTHER).first()
+            if other_transition:
+                return other_transition
+            # 拒绝
+            refue_transition = transition_queryset.filter(attribute_type_id=constant_service_ins.TRANSITION_ATTRIBUTE_TYPE_REFUSE).first()
+            if refue_transition:
+                return refue_transition
+        return False
+
+
+    @classmethod
+    @auto_log
+    def get_ticket_flow_related_step_list(cls, ticket_id, state_id, call_num=0, state_obj_list=None):
+        """从某张单据的某个状态开始 获取后面所有相关流转节点"""
+        if not state_obj_list:
+            datastate_obj_list_list = []
+        call_num += 1
+        # 如果超过100个节点就不获取了
+        if call_num >= 100:
+            return state_obj_list
+        transition_obj = cls.get_transition_by_ticket_state(state_id)
+        if not transition_obj:
+            return state_obj_list
+        
+        # 当前节点有流转继续走
+        flag, msg = cls.get_next_state_id_by_transition_and_ticket_info(ticket_id=ticket_id, transition_id=transition_obj.id)
+        if not flag:
+            return state_obj_list
+
+        destination_state_id = msg.get('destination_state_id')
+        if not destination_state_id:
+            return state_obj_list
+
+        destination_state_obj = State.objects.filter(is_deleted=0, id=destination_state_id).first()
+        if destination_state_obj:
+            state_obj_list.append(destination_state_obj)
+        
+        return cls.get_ticket_flow_related_step_list(ticket_id=ticket_id, state_id=destination_state_id, call_num=call_num, state_obj_list=state_obj_list)
+
+    @classmethod
+    @auto_log
+    def get_ticket_flow_related_step(cls, ticket_id: int, username: str) -> tuple:
+        """
+        工单的流转步骤，路径。直线流转, 步骤不会很多(因为同个状态只显示一次，隐藏的状态只有当前处于才显示，否则不显示)，默认先不分页
+        get ticket flow step info
+        :param ticket_id:
+        :param username:
+        :return:
+        """
+        # 先获取工单对应工作流的信息
+        ticket_obj = TicketRecord.objects.filter(id=ticket_id, is_deleted=0).first()
+        if not ticket_obj:
+            return False, '工单不存在或已被删除'
+        workflow_id = ticket_obj.workflow_id
+        flag, state_obj_qs = workflow_state_service_ins.get_workflow_states(workflow_id)
+
+        # 找初始节点 有且只有一个
+        init_state = state_obj_qs.filter(type_id=1).first()
+        state_obj_list = cls.get_ticket_flow_related_step_list(ticket_id=ticket_id, state_id=init_state.id)
+        # 在最前面插入初始节点
+        state_obj_list.insert(0, init_state)
+
+        ticket_flow_log_queryset = TicketFlowLog.objects.filter(ticket_id=ticket_id, is_deleted=0)
+
+        state_step_dict_list = []
+        for state_obj in state_obj_list:
+            if state_obj.id == ticket_obj.state_id or (not state_obj.is_hidden):
+                label_dict = json.loads(state_obj.label) if state_obj.label else {}
+                ticket_state_step_dict = dict(state_id=state_obj.id, state_name=state_obj.name,
+                                              order_id=state_obj.order_id, label=label_dict,
+                                              participant_user_list=state_obj.participant_user_list)
+                state_flow_log_list = []
+                for ticket_flow_log in ticket_flow_log_queryset:
+                    if ticket_flow_log.state_id == state_obj.id:
+                        # 此部分和get_ticket_flow_log代码冗余，后续会简化下
+                        flag, result = cls.get_flow_log_transition_name(ticket_flow_log.transition_id,
+                                                                        ticket_flow_log.intervene_type_id)
+                        if flag is False:
+                            return False, result
+                        transition_name = result.get('transition_name')
+                        attribute_type_id = result.get('attribute_type_id')
+
+                        participant_info = dict(participant_type_id=ticket_flow_log.participant_type_id,
+                                                participant=ticket_flow_log.participant,
+                                                participant_alias=ticket_flow_log.participant,
+                                                participant_email='', participant_phone=''
+                                                )
+                        if ticket_flow_log.participant_type_id == constant_service_ins.PARTICIPANT_TYPE_PERSONAL:
+                            flag, participant_query_obj = account_base_service_ins.get_user_by_username(
+                                ticket_flow_log.participant)
+                            if flag:
+                                participant_info.update(participant_alias=participant_query_obj.alias,
+                                                        participant_email=participant_query_obj.email,
+                                                        participant_phone=participant_query_obj.phone
+                                                        )
+
+                        state_flow_log_list.append(dict(id=ticket_flow_log.id, transition=dict(
+                            transition_name=transition_name, transition_id=ticket_flow_log.transition_id),
+                                                        participant_type_id=ticket_flow_log.participant_type_id,
+                                                        participant=ticket_flow_log.participant,
+                                                        participant_info=participant_info,
+                                                        intervene_type_id=ticket_flow_log.intervene_type_id,
+                                                        suggestion=ticket_flow_log.suggestion,
+                                                        state_id=ticket_flow_log.state_id,
+                                                        attribute_type_id=attribute_type_id,
+                                                        gmt_created=str(ticket_flow_log.gmt_created)[:19]))
+                state_flow_log_list = sorted(state_flow_log_list, key=lambda keys: keys['id'], reverse=True)
                 ticket_state_step_dict['state_flow_log_list'] = state_flow_log_list
                 state_step_dict_list.append(ticket_state_step_dict)
                 state_step_dict_list = sorted(state_step_dict_list, key=lambda keys: keys['order_id'])

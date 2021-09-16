@@ -263,6 +263,31 @@ class TicketFlowStep(LoonBaseView):
         return api_response(code, msg, data)
 
 
+class TicketFlowRelatedStep(LoonBaseView):
+    """
+    动态计算当前单据当前状态相关流转图
+    """
+    def get(self, request, *args, **kwargs):
+        ticket_id = kwargs.get('ticket_id')
+        username = request.META.get('HTTP_USERNAME')
+        app_name = request.META.get('HTTP_APPNAME')
+
+        app_permission_check, msg = account_base_service_ins.app_ticket_permission_check(app_name, ticket_id)
+        if not app_permission_check:
+            return api_response(-1, msg, '')
+
+        if not username:
+            return api_response(-1, '参数不全，请提供username', '')
+
+        flag, result = ticket_base_service_ins.get_ticket_flow_related_step(ticket_id, username)
+        if flag is not False:
+            data = dict(value=result.get('state_step_dict_list'), current_state_id=result.get('current_state_id'))
+            code, msg,  = 0, ''
+        else:
+            code, data = -1, ''
+        return api_response(code, msg, data)
+
+
 class TicketState(LoonBaseView):
     """
     工单状态
