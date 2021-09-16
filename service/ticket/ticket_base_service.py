@@ -1524,7 +1524,7 @@ class TicketBaseService(BaseService):
     def get_ticket_flow_related_step_list(cls, ticket_id, state_id, call_num=0, state_obj_list=None):
         """从某张单据的某个状态开始 获取后面所有相关流转节点"""
         if not state_obj_list:
-            datastate_obj_list_list = []
+            state_obj_list = []
         call_num += 1
         # 如果超过100个节点就不获取了
         if call_num >= 100:
