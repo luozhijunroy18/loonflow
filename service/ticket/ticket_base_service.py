@@ -1532,20 +1532,17 @@ class TicketBaseService(BaseService):
         transition_obj = cls.get_transition_by_ticket_state(state_id)
         if not transition_obj:
             return state_obj_list
-        
         # 当前节点有流转继续走
-        flag, msg = cls.get_next_state_id_by_transition_and_ticket_info(ticket_id=ticket_id, transition_id=transition_obj.id)
+        flag, msg = cls.get_next_state_id_by_transition(ticket_id=ticket_id, transition_obj=transition_obj)
         if not flag:
             return state_obj_list
 
         destination_state_id = msg.get('destination_state_id')
         if not destination_state_id:
             return state_obj_list
-
         destination_state_obj = State.objects.filter(is_deleted=0, id=destination_state_id).first()
         if destination_state_obj:
             state_obj_list.append(destination_state_obj)
-        
         return cls.get_ticket_flow_related_step_list(ticket_id=ticket_id, state_id=destination_state_id, call_num=call_num, state_obj_list=state_obj_list)
 
     @classmethod
@@ -1570,9 +1567,7 @@ class TicketBaseService(BaseService):
         state_obj_list = cls.get_ticket_flow_related_step_list(ticket_id=ticket_id, state_id=init_state.id)
         # 在最前面插入初始节点
         state_obj_list.insert(0, init_state)
-
         ticket_flow_log_queryset = TicketFlowLog.objects.filter(ticket_id=ticket_id, is_deleted=0)
-
         state_step_dict_list = []
         for state_obj in state_obj_list:
             if state_obj.id == ticket_obj.state_id or (not state_obj.is_hidden):
@@ -1618,7 +1613,7 @@ class TicketBaseService(BaseService):
                 state_flow_log_list = sorted(state_flow_log_list, key=lambda keys: keys['id'], reverse=True)
                 ticket_state_step_dict['state_flow_log_list'] = state_flow_log_list
                 state_step_dict_list.append(ticket_state_step_dict)
-                state_step_dict_list = sorted(state_step_dict_list, key=lambda keys: keys['order_id'])
+                # state_step_dict_list = sorted(state_step_dict_list, key=lambda keys: keys['order_id'])
         return True, dict(state_step_dict_list=state_step_dict_list, current_state_id=ticket_obj.state_id)
 
     @classmethod
@@ -2247,6 +2242,42 @@ class TicketBaseService(BaseService):
             # 更新当前更新的字段的值
             ticket_all_value_dict_copy = copy.deepcopy(ticket_all_value_dict)
             ticket_all_value_dict_copy.update(ticket_req_dict)
+            for key, value in ticket_all_value_dict_copy.items():
+                if isinstance(ticket_all_value_dict_copy[key], str):
+                    ticket_all_value_dict_copy[key] = "'''" + ticket_all_value_dict_copy[key] + "'''"
+
+            for condition_expression0 in condition_expression_list:
+                expression = condition_expression0.get('expression')
+                expression_format = expression.format(**ticket_all_value_dict_copy)
+                import datetime, time  # 用于支持条件表达式中对时间的操作
+                if eval(expression_format):
+                    destination_state_id = condition_expression0.get('target_state_id')
+                    break
+
+        return True, dict(destination_state_id=destination_state_id)
+
+    @classmethod
+    @auto_log
+    def get_next_state_id_by_transition(cls, ticket_id, transition_obj)->tuple:
+        """
+        获取工单的下个状态id,需要考虑条件流转的情况
+        get ticket's next state_id by transition
+        :param ticket_id:
+        :param ticket_req_dict:
+        :return:
+        """        
+        condition_expression = transition_obj.condition_expression
+        destination_state_id = transition_obj.destination_state_id
+
+        if condition_expression and json.loads(condition_expression):
+            # 存在条件表达式，需要根据表达式计算下个状态
+            condition_expression_list = json.loads(condition_expression)
+            ticket_all_value_dict = {}
+            if ticket_id:
+                # 获取工单所有字段的值
+                flag, ticket_all_value_dict = cls.get_ticket_all_field_value(ticket_id)
+            # 更新当前更新的字段的值
+            ticket_all_value_dict_copy = copy.deepcopy(ticket_all_value_dict)
             for key, value in ticket_all_value_dict_copy.items():
                 if isinstance(ticket_all_value_dict_copy[key], str):
                     ticket_all_value_dict_copy[key] = "'''" + ticket_all_value_dict_copy[key] + "'''"

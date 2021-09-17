@@ -281,7 +281,7 @@ class TicketFlowRelatedStep(LoonBaseView):
 
         flag, result = ticket_base_service_ins.get_ticket_flow_related_step(ticket_id, username)
         if flag is not False:
-            data = dict(value=result.get('state_step_dict_list'), current_state_id=result.get('current_state_id'))
+            data = dict(value=result.get('state_step_dict_list'), current_state_id=result.get('current_state_id'), ticket_info=result.get('ticket_info'))
             code, msg,  = 0, ''
         else:
             code, data = -1, ''
