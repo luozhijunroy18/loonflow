@@ -85,3 +85,18 @@ vue.js + django |https://gitee.com/shihow/howflow-open | qq群中,qq号:39188043
 您的支持是我最大的动力,欢迎支付宝扫码捐助
 
 ![donation_code](/static/images/donation_code.png)
+
+############################   本地维护说明  ############################   
+## 一、两个仓库分支必须保持对应
+## 二、上线分支永远为`local`
+## 三、合并最新开源功能，需要将开源新代码拉取到自己的github `master`， 然后mr到gitlab`local`
+
+同一git项目指向不同仓库，起不同别名
+git remote add loonflow-gitlab https://git.ekuaibao.com/devops/loonflow.git
+
+拉取/推送  指定别名   
+指定： git push loonflow-gitlab local   
+默认： git push origin local  ==> git push local
+
+
+
