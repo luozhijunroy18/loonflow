@@ -90,7 +90,10 @@ class WorkflowPermissionService(BaseService):
         :param workflow_ids:
         :return:
         """
-        workflow_id_list = [int(workflow_id) for workflow_id in workflow_ids.split(',')]
+        if workflow_ids:
+            workflow_id_list = [int(workflow_id) for workflow_id in workflow_ids.split(',')]
+        else:
+            workflow_id_list = []
         permission_query_set = WorkflowUserPermission.objects.filter(
             is_deleted=0, permission='api', user_type='app', user=app_name).all()
         exist_workflow_id_list = [permission_query.workflow_id for permission_query in permission_query_set]

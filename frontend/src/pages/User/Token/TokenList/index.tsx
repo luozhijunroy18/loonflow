@@ -47,6 +47,7 @@ class TokenList extends Component<any, any> {
       pagination.page = result.data.page;
       pagination.pageSize = result.data.per_page;
       pagination.total = result.data.total;
+      pagination.current = result.data.page;
 
       this.setState({tokenResultLoading: false, tokenResult: result.data.value, pagination})
     }
@@ -82,7 +83,8 @@ class TokenList extends Component<any, any> {
 
   onTokenFinish = async(values) => {
     let result = {};
-    values.workflow_ids = values.workflow_ids.join(',');
+
+    values.workflow_ids = values.workflow_ids? values.workflow_ids.join(','): '';
     if (this.state.tokenDetail && this.state.tokenDetail.id ) {
       result = await updateTokenRequest(this.state.tokenDetail.id, values);
     } else {
@@ -211,7 +213,7 @@ class TokenList extends Component<any, any> {
                rowKey={record => record.id} pagination={this.state.pagination}/>
 
         <Modal
-          title="调用权限"
+          title={this.state.tokenDetail.app_name? `调用权限:${this.state.tokenDetail.app_name}`: '调用权限'}
           visible={this.state.tokenModalVisible}
           onOk={this.handleTokenOk}
           onCancel={this.handleTokenCancel}
@@ -223,9 +225,12 @@ class TokenList extends Component<any, any> {
             {...layout}
             onFinish={this.onTokenFinish}
           >
-            <Form.Item name="app_name" label="调用应用" rules={[{ required: true }]} initialValue={this.getTokenDetailField('app_name')}>
-              <Input />
-            </Form.Item>
+            {this.state.tokenDetail && this.state.tokenDetail.id ? null :
+              <Form.Item name="app_name" label="调用应用" rules={[{required: true}]}
+                         initialValue={this.getTokenDetailField('app_name')}>
+                <Input/>
+              </Form.Item>
+            }
             <Form.Item name="ticket_sn_prefix" label="工单前缀" initialValue={String(this.getTokenDetailField('ticket_sn_prefix'))}>
               <Input />
             </Form.Item>

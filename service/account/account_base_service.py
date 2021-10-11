@@ -186,7 +186,7 @@ class AccountBaseService(BaseService):
         user_dept_queryset = LoonUserDept.objects.filter(user_id=user_obj.id, is_deleted=0).all()
         user_dept_id_list = [user_dept.dept_id for user_dept in user_dept_queryset]
         for user_dept_id in user_dept_id_list:
-            iter_dept(user_obj.dept_id)
+            iter_dept(user_dept_id)
         dept_id_list = list(set(dept_id_list))
         return True, dept_id_list
 
@@ -820,25 +820,28 @@ class AccountBaseService(BaseService):
         """
         import uuid
         token = uuid.uuid1()
+        query_result = AppToken.objects.filter(app_name=app_name, is_deleted=0)
+        if query_result:
+            return False, 'app_name existed,please alter app_name'
         app_token_obj = AppToken(app_name=app_name, ticket_sn_prefix=ticket_sn_prefix,
                                  token=token, creator=username)
         app_token_obj.save()
 
         from apps.workflow.models import WorkflowUserPermission
         permission_sql_list = []
-        for workflow_id in workflow_ids.split(','):
-            permission_sql_list.append(WorkflowUserPermission(workflow_id=int(workflow_id), permission='api', user_type='app', user=app_name))
+        if workflow_ids:
+            for workflow_id in workflow_ids.split(','):
+                permission_sql_list.append(WorkflowUserPermission(workflow_id=int(workflow_id), permission='api', user_type='app', user=app_name))
         WorkflowUserPermission.objects.bulk_create(permission_sql_list)
 
         return True, dict(app_token_id=app_token_obj.id)
 
     @classmethod
     @auto_log
-    def update_token_record(cls, app_token_id: int, app_name: str, ticket_sn_prefix: str, workflow_ids: str)->tuple:
+    def update_token_record(cls, app_token_id: int, ticket_sn_prefix: str, workflow_ids: str)->tuple:
         """
         update token record
         :param app_token_id:
-        :param app_name:
         :param ticket_sn_prefix:
         :param workflow_ids:
         :return:
@@ -846,12 +849,12 @@ class AccountBaseService(BaseService):
         app_token_obj = AppToken.objects.filter(id=app_token_id, is_deleted=0).first()
         if not app_token_obj:
             return False, 'record is not exist or has been deleted'
-        app_token_obj.app_name = app_name
+
         app_token_obj.ticket_sn_prefix = ticket_sn_prefix
         app_token_obj.save()
 
         from service.workflow.workflow_permission_service import workflow_permission_service_ins
-        workflow_permission_service_ins.update_app_permission(app_name, workflow_ids)
+        workflow_permission_service_ins.update_app_permission(app_token_obj.app_name, workflow_ids)
         return True, ''
 
     @classmethod

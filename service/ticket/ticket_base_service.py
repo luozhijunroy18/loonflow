@@ -373,7 +373,13 @@ class TicketBaseService(BaseService):
     def gen_ticket_sn(cls, app_name: str='')->tuple:
         redis_conn = redis.Redis(connection_pool=POOL)
         ticket_day_count_key = 'ticket_day_count_{}'.format(str(datetime.datetime.now())[:10])
-        ticket_day_count = redis_conn.get(ticket_day_count_key)
+        try:
+            ticket_day_count = redis_conn.get(ticket_day_count_key)
+        except redis.exceptions.ConnectionError:
+            return False, 'Redis连接失败，请确认Redis已启动并配置正确'
+        except Exception as e:
+            raise Exception(e.__str__())
+
         if ticket_day_count is not None:
             new_ticket_day_count = redis_conn.incr(ticket_day_count_key)
         else:
@@ -1500,8 +1506,12 @@ class TicketBaseService(BaseService):
         """
         if transition_id:
             flag, transition_obj = workflow_transition_service_ins.get_workflow_transition_by_id(transition_id)
-            transition_name = transition_obj.name
-            attribute_type_id = transition_obj.attribute_type_id
+            if not transition_obj:
+                transition_name = '未知操作'
+                attribute_type_id = constant_service_ins.TRANSITION_ATTRIBUTE_TYPE_OTHER
+            else:
+                transition_name = transition_obj.name
+                attribute_type_id = transition_obj.attribute_type_id
         else:
             if intervene_type_id == constant_service_ins.TRANSITION_INTERVENE_TYPE_DELIVER:
                 transition_name = '转交操作'
